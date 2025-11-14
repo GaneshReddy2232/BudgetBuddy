@@ -2,7 +2,7 @@
 
 ## 🌐 Live Demo
 🔗 **BudgetBuddy is live here:**  
-https://budgetbuddy-qmno.onrender.com
+https://ganeshreddy2232.pythonanywhere.com
 
 
 
