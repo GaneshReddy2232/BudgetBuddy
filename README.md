@@ -1,4 +1,11 @@
 #  BudgetBuddy – Flask Expense Tracker  
+
+## 🌐 Live Demo
+🔗 **BudgetBuddy is live here:**  
+https://budgetbuddy-qmno.onrender.com
+
+
+
 A clean, fast, beginner-friendly **Flask web application** to manage expenses with full **CRUD operations**, **monthly comparison**,
 **SVG-based charts**, and **server-side filtering**
 
