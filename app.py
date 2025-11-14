@@ -7,7 +7,7 @@ import os
 import math
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'change-this-secret'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -469,4 +469,5 @@ def download_summary_svg():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
