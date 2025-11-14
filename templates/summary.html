@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Page Header -->
+  <div class="glass-card shadow-sm p-4 mb-4 animate-card">
+    <h2 class="mb-1" style="color: #667eea; font-weight: 700;">📊 Monthly Comparison</h2>
+    <p class="text-muted small mb-0">Compare your expenses across different months</p>
+  </div>
+
+  <!-- Comparison Form -->
+  <div class="glass-card shadow-sm p-4 mb-4 animate-card">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label fw-semibold small">Primary Month</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">📅</span>
+          <input type="number" name="month" min="1" max="12" value="{{ month }}" placeholder="MM" class="form-control" required>
+          <input type="number" name="year" min="1900" max="2100" value="{{ year }}" placeholder="YYYY" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label fw-semibold small">Compare With</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">📅</span>
+          <input type="number" name="compare_month" min="1" max="12" value="{{ compare_month }}" placeholder="MM" class="form-control" required>
+          <input type="number" name="compare_year" min="1900" max="2100" value="{{ compare_year }}" placeholder="YYYY" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary">Compare</button>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('monthly_summary') }}">🔄 Reset</a>
+          <a class="btn btn-outline-primary btn-sm" href="{{ url_for('download_summary_svg', month=month, year=year, compare_month=compare_month, compare_year=compare_year) }}">⬇️ Download SVG</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Charts -->
+    <div class="col-lg-8">
+      <div class="glass-card shadow-sm p-4 animate-card">
+        <h5 class="mb-3 fw-semibold" style="color: #667eea;">
+          📈 {{ month_name }} {{ year }} vs {{ compare_month_name }} {{ compare_year }}
+        </h5>
+
+        <!-- Pie Charts Container -->
+        <div class="d-flex flex-wrap gap-4 justify-content-center mb-4">
+          <!-- Primary Month Pie -->
+          <div class="pie-chart-container">
+            <div class="text-center mb-3">
+              <div class="fw-semibold" style="color: #667eea;">{{ month_name }} {{ year }}</div>
+              <div class="small text-muted">Total: <strong>₹{{ '%.2f'|format(primary_total) }}</strong></div>
+            </div>
+
+            <div class="pie-chart-wrapper">
+              <svg viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Pie chart for {{ month_name }} {{ year }}">
+                {% if primary_pie %}
+                  {% for slice in primary_pie %}
+                    <path d="{{ slice.d }}" fill="{{ slice.color }}" stroke="#fff" stroke-width="2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));"></path>
+                  {% endfor %}
+                  {% for slice in primary_pie %}
+                    <text x="{{ '%.2f'|format(slice.label_x) }}" y="{{ '%.2f'|format(slice.label_y) }}" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" dominant-baseline="middle" style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                      {{ slice.pct }}%
+                    </text>
+                  {% endfor %}
+                {% else %}
+                  <circle cx="120" cy="120" r="90" fill="#f1f3f5"></circle>
+                  <text x="120" y="120" text-anchor="middle" dominant-baseline="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#666">📊 No data</text>
+                {% endif %}
+              </svg>
+            </div>
+          </div>
+
+          <!-- Compare Month Pie -->
+          <div class="pie-chart-container">
+            <div class="text-center mb-3">
+              <div class="fw-semibold" style="color: #764ba2;">{{ compare_month_name }} {{ compare_year }}</div>
+              <div class="small text-muted">Total: <strong>₹{{ '%.2f'|format(compare_total) }}</strong></div>
+            </div>
+
+            <div class="pie-chart-wrapper">
+              <svg viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Pie chart for {{ compare_month_name }} {{ compare_year }}">
+                {% if compare_pie %}
+                  {% for slice in compare_pie %}
+                    <path d="{{ slice.d }}" fill="{{ slice.color }}" stroke="#fff" stroke-width="2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));"></path>
+                  {% endfor %}
+                  {% for slice in compare_pie %}
+                    <text x="{{ '%.2f'|format(slice.label_x) }}" y="{{ '%.2f'|format(slice.label_y) }}" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle" dominant-baseline="middle" style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                      {{ slice.pct }}%
+                    </text>
+                  {% endfor %}
+                {% else %}
+                  <circle cx="120" cy="120" r="90" fill="#f1f3f5"></circle>
+                  <text x="120" y="120" text-anchor="middle" dominant-baseline="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#666">📊 No data</text>
+                {% endif %}
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-container p-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); border-radius: 12px;">
+          <div class="small fw-semibold mb-2" style="color: #667eea;">📋 Category Legend</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% set legend_colors = ['#3A9AD9', '#FF6B78', '#FFD166', '#6BCB77', '#8E63FF', '#FF9F80'] %}
+            {% for cat in comparison %}
+              {% set i = loop.index0 %}
+              <div class="legend-item">
+                <span class="legend-color" style="background: {{ legend_colors[i % (legend_colors|length)] }};"></span>
+                <span class="small fw-medium">{{ cat.category }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Stats & Info -->
+    <div class="col-lg-4">
+      <!-- Totals Card -->
+      <div class="glass-card shadow-sm p-4 mb-3 animate-card">
+        <h6 class="fw-semibold mb-3" style="color: #667eea;">💰 Totals Overview</h6>
+        
+        <div class="stat-row mb-3 p-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 8px;">
+          <div class="small text-muted mb-1">Primary Month</div>
+          <div class="h4 mb-0 fw-bold" style="color: #667eea;">₹{{ '%.2f'|format(primary_total) }}</div>
+          <div class="small text-muted">{{ month_name }} {{ year }}</div>
+        </div>
+
+        <div class="stat-row mb-3 p-3" style="background: linear-gradient(135deg, rgba(118, 75, 162, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%); border-radius: 8px;">
+          <div class="small text-muted mb-1">Compare Month</div>
+          <div class="h4 mb-0 fw-bold" style="color: #764ba2;">₹{{ '%.2f'|format(compare_total) }}</div>
+          <div class="small text-muted">{{ compare_month_name }} {{ compare_year }}</div>
+        </div>
+
+        <div class="stat-row p-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
+          <div class="small opacity-75 mb-1">Overall Change</div>
+          <div class="h3 mb-0 fw-bold">
+            {% if overall_pct == 'inf' %}
+              🆕 New
+            {% elif overall_pct is none %}
+              N/A
+            {% else %}
+              {% if overall_pct > 0 %}📈{% else %}📉{% endif %} {{ '%.2f'|format(overall_pct) }}%
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Card -->
+      <div class="glass-card shadow-sm p-4 animate-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);">
+        <h6 class="fw-semibold mb-3" style="color: #667eea;">💡 Chart Guide</h6>
+        <p class="small text-muted mb-2">
+          <strong>Pie Charts:</strong> Show the percentage distribution of expenses across categories for each selected month.
+        </p>
+        <p class="small text-muted mb-0">
+          <strong>Percentages:</strong> Displayed directly on chart slices. Use the legend below to identify each category by color.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

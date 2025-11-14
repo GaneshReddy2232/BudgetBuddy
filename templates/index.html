@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="row g-4">
+    <!-- LEFT: Filters & Actions -->
+    <aside class="col-lg-3">
+      <div class="glass-card shadow-sm mb-3 p-4">
+        <h6 class="section-title">Filter Expenses</h6>
+
+        <form method="get" action="{{ url_for('index') }}" class="d-grid gap-3">
+          <div>
+            <label class="form-label small fw-semibold">Search Title</label>
+            <input name="q" type="text" value="{{ q }}" placeholder="e.g. rent, groceries" class="form-control">
+          </div>
+
+          <div>
+            <label class="form-label small fw-semibold">Category</label>
+            <select name="category" class="form-select">
+              <option value="all" {% if selected_category=='all' %}selected{% endif %}>All categories</option>
+              <option value="Food" {% if selected_category=='Food' %}selected{% endif %}>🍔 Food</option>
+              <option value="Travel" {% if selected_category=='Travel' %}selected{% endif %}>✈️ Travel</option>
+              <option value="Bills" {% if selected_category=='Bills' %}selected{% endif %}>📄 Bills</option>
+            </select>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small fw-semibold">Month</label>
+              <input name="month" type="number" min="1" max="12" value="{{ filter_month or '' }}" placeholder="MM" class="form-control">
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold">Year</label>
+              <input name="year" type="number" min="1900" max="2100" value="{{ filter_year or '' }}" placeholder="YYYY" class="form-control">
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-primary w-100">Apply Filters</button>
+            <a class="btn btn-outline-secondary w-100" href="{{ url_for('index') }}">Reset</a>
+          </div>
+        </form>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT: Summary & Table -->
+    <main class="col-lg-9">
+      <!-- Summary cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="stat-card shadow p-4">
+            <div class="small opacity-75 mb-1">Total Amount (Filtered)</div>
+            <div class="h3 mb-0 fw-bold">₹{{ '%.2f'|format(month_total) }}</div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="stat-card shadow p-4">
+            <div class="small opacity-75 mb-1">Total Records</div>
+            <div class="h3 mb-0 fw-bold">{{ expenses|length }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active filters display -->
+      {% if q or (selected_category and selected_category != 'all') or (filter_month and filter_year) %}
+      <div class="mb-3">
+        <div class="small text-white fw-semibold mb-2">Active Filters:</div>
+        {% if q %}<span class="filter-badge">Search: {{ q }}</span>{% endif %}
+        {% if selected_category and selected_category != 'all' %}<span class="filter-badge">Category: {{ selected_category }}</span>{% endif %}
+        {% if filter_month and filter_year %}<span class="filter-badge">Month: {{ filter_month }}/{{ filter_year }}</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Expenses table -->
+      <div class="glass-card shadow-sm">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th style="width:140px" class="px-4 py-3">Date</th>
+                  <th class="py-3">Title</th>
+                  <th style="width:130px" class="py-3">Category</th>
+                  <th style="width:130px" class="text-end py-3">Amount</th>
+                  <th style="width:180px" class="py-3 pe-4">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for e in expenses %}
+                <tr>
+                  <td class="px-4">{{ e.date.strftime('%Y-%m-%d') }}</td>
+                  <td class="fw-semibold">{{ e.title }}</td>
+                  <td>
+                    <span class="category-badge category-{{ e.category.lower() }}">
+                      {{ e.category }}
+                    </span>
+                  </td>
+                  <td class="text-end amount-cell">₹{{ '%.2f'|format(e.amount) }}</td>
+                  <td class="pe-4">
+                    <a href="{{ url_for('edit_expense', expense_id=e.id) }}" class="btn btn-sm btn-outline-primary me-1">Edit</a>
+                    <a href="{{ url_for('confirm_delete_page', expense_id=e.id) }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <strong>No expenses found</strong><br>
+                    <span class="small">Try adjusting your filters or add a new expense</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

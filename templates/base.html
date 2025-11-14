@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BudgetBuddy</title>
+
+    <!-- Bootstrap CSS (only CSS, no JS) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <!-- Enhanced Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+          <span class="badge bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.2rem;">💰</span>
+          <span style="font-size: 1.3rem; letter-spacing: -0.5px;">BudgetBuddy</span>
+        </a>
+
+        <!-- Mobile toggle button -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+          <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3 mt-3 mt-lg-0">
+            <small class="text-white opacity-75 d-none d-lg-block">
+              📅 {{ (now()|default('')) }}
+            </small>
+            <a class="btn btn-light btn-sm px-3 shadow-sm" href="{{ url_for('add_expense') }}" style="border-radius: 8px; font-weight: 500;">
+              ➕ Add Expense
+            </a>
+            <a class="btn btn-outline-light btn-sm px-3" href="{{ url_for('monthly_summary') }}" style="border-radius: 8px; font-weight: 500;">
+              📊 Monthly Summary
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <div class="container py-4">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages mb-4">
+            {% for category, msg in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm animate-card" role="alert" style="border-radius: 12px; border-left: 4px solid; border-left-color: {% if category == 'success' %}#198754{% elif category == 'danger' %}#dc3545{% elif category == 'warning' %}#ffc107{% else %}#0dcaf0{% endif %};">
+                <div class="d-flex align-items-center gap-2">
+                  <span style="font-size: 1.2rem;">
+                    {% if category == 'success' %}✅
+                    {% elif category == 'danger' %}❌
+                    {% elif category == 'warning' %}⚠️
+                    {% else %}ℹ️
+                    {% endif %}
+                  </span>
+                  <span>{{ msg }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Page Content -->
+      <div id="page" class="fade-in show">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-4 text-white text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div class="container">
+        <p class="mb-2 opacity-75">
+          💰 <strong>BudgetBuddy</strong> - Your Personal Expense Manager
+        </p>
+        <p class="small mb-0 opacity-50">
+          Track expenses, manage budgets, achieve financial goals
+        </p>
+      </div>
+    </footer>
+      </body>
+</html>

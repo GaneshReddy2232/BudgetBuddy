@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card shadow-sm mx-auto" style="max-width:640px;">
+  <div class="card-body text-center">
+    <h4 class="mb-2">Delete expense</h4>
+    <p class="text-muted">Are you sure you want to delete:</p>
+    <p class="fw-bold">{{ expense.title }} — ₹{{ '%.2f'|format(expense.amount) }}</p>
+
+    <form method="post" action="{{ url_for('delete_expense', expense_id=expense.id) }}" style="display:inline-block">
+      <button class="btn btn-danger me-2">Yes, delete</button>
+    </form>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</div>
+{% endblock %}
