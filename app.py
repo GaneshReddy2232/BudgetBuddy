@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import extract
 from datetime import datetime, date, timedelta
 import calendar
 import os
 import math
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback-secret')
@@ -14,15 +16,26 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # --- make a now() callable available inside Jinja templates ---
+from typing import Optional
+
 @app.context_processor
 def inject_now():
-    # now(fmt) -> formatted UTC time string; default format is "YYYY-MM-DD HH:MM:SS"
-    def now(fmt: str | None = None):
+    def now(fmt: Optional[str] = None):
         if fmt:
             return datetime.utcnow().strftime(fmt)
         return datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     return {'now': now}
+
 # ------------------------------------------------------------
+
+# ------------------ Models ------------------
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+
+    def __repr__(self):
+        return f"<User {self.username}>"
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,6 +43,11 @@ class Expense(db.Model):
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+
+    # associate expenses with a user (optional - per-user data)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    # if you enable per-user expenses you can uncomment the relationship below
+    # user = db.relationship('User', backref='expenses')
 
     def __repr__(self):
         return f"<Expense {self.title} - {self.amount}>"
@@ -39,7 +57,88 @@ with app.app_context():
     db.create_all()
 
 
+# ------------------ Auth helpers ------------------
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please log in to continue", "warning")
+            return redirect(url_for('login', next=request.path))
+        return f(*args, **kwargs)
+    return wrapper
+
+# Optional: get current user helper
+def current_user():
+    if 'user_id' in session:
+        return User.query.get(session['user_id'])
+    return None
+
+# Make user available in templates
+@app.context_processor
+def inject_user():
+    return {'current_user': current_user()}
+
+# ------------------ Auth routes ------------------
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not username or not password:
+            flash("Please provide both username and password", "danger")
+            return redirect(url_for('signup'))
+
+        if User.query.filter_by(username=username).first():
+            flash("Username already taken", "danger")
+            return redirect(url_for('signup'))
+
+        hashed_pw = generate_password_hash(password)
+        user = User(username=username, password=hashed_pw)
+        db.session.add(user)
+        db.session.commit()
+
+        flash("Account created — please log in", "success")
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # if already logged in, go to index
+    if 'user_id' in session:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            flash("Logged in successfully", "success")
+            # redirect to next param if present
+            next_url = request.args.get('next') or url_for('index')
+            return redirect(next_url)
+        else:
+            flash("Invalid username or password", "danger")
+            return redirect(url_for('login'))
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out", "info")
+    return redirect(url_for('login'))
+
+# ------------------ Expense routes ------------------
+
 @app.route('/')
+@login_required
 def index():
     """
     List expenses with server-side filtering via query params:
@@ -57,6 +156,11 @@ def index():
 
     # build filters list (safe, reusable)
     filters = []
+
+    # If you want expenses to be user-specific, uncomment and use current_user
+    # user = current_user()
+    # if user:
+    #     filters.append(Expense.user_id == user.id)
 
     if q:
         filters.append(Expense.title.ilike(f'%{q}%'))
@@ -93,6 +197,7 @@ def index():
 
 
 @app.route('/add', methods=['GET', 'POST'])
+@login_required
 def add_expense():
     if request.method == 'POST':
         title = request.form['title']
@@ -108,7 +213,13 @@ def add_expense():
             flash('Please fill all required fields', 'danger')
             return redirect(url_for('add_expense'))
 
-        exp = Expense(title=title, amount=float(amount), category=category, date=date_val)
+        exp = Expense(
+            title=title,
+            amount=float(amount),
+            category=category,
+            date=date_val,
+            # user_id = session.get('user_id')  # enable if associating with user
+        )
         db.session.add(exp)
         db.session.commit()
         flash('Expense added successfully', 'success')
@@ -118,8 +229,14 @@ def add_expense():
 
 
 @app.route('/edit/<int:expense_id>', methods=['GET', 'POST'])
+@login_required
 def edit_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
+    # if per-user data, ensure the user owns this expense:
+    # if expense.user_id != session.get('user_id'):
+    #     flash("Not authorized", "danger")
+    #     return redirect(url_for('index'))
+
     if request.method == 'POST':
         expense.title = request.form['title']
         expense.amount = float(request.form['amount'])
@@ -137,12 +254,14 @@ def edit_expense(expense_id):
 
 
 @app.route('/confirm_delete/<int:expense_id>', methods=['GET'])
+@login_required
 def confirm_delete_page(expense_id):
     expense = Expense.query.get_or_404(expense_id)
     return render_template('confirm_delete.html', expense=expense)
 
 
 @app.route('/delete/<int:expense_id>', methods=['POST'])
+@login_required
 def delete_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
     db.session.delete(expense)
@@ -150,6 +269,8 @@ def delete_expense(expense_id):
     flash('Expense deleted', 'info')
     return redirect(url_for('index'))
 
+
+# ------------------ Summary & SVG code (unchanged, protected) ------------------
 
 def totals_for_month(month: int, year: int):
     """Return (totals_by_category_dict, total_sum) for given month/year."""
@@ -227,6 +348,7 @@ def make_pie_paths(slices, total, cx=120, cy=120, r=100, colors=None):
 
 
 @app.route('/summary')
+@login_required
 def monthly_summary():
     # Default primary month = current month
     today = datetime.utcnow().date()
@@ -319,6 +441,7 @@ def monthly_summary():
 
 
 @app.route('/download_summary_svg')
+@login_required
 def download_summary_svg():
     """
     Returns a downloadable SVG that contains:
@@ -467,7 +590,7 @@ def download_summary_svg():
     filename = f'comparison_{year}_{month}_vs_{compare_year}_{compare_month}.svg'
     return Response(svg_text, mimetype='image/svg+xml', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
 
-
+# ------------------ Run ------------------
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

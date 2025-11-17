@@ -36,6 +36,18 @@
             <a class="btn btn-outline-light btn-sm px-3" href="{{ url_for('monthly_summary') }}" style="border-radius: 8px; font-weight: 500;">
               📊 Monthly Summary
             </a>
+
+            <!-- Auth area: shows user when logged in, otherwise Login / Sign up -->
+            <div class="d-flex align-items-center gap-2">
+              {% if current_user %}
+                <span class="text-white d-none d-md-inline me-2">Hi, <strong>{{ current_user.username }}</strong></span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm" style="border-radius: 8px;">Logout</a>
+              {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-light btn-sm" style="border-radius: 8px;">Login</a>
+                <a href="{{ url_for('signup') }}" class="btn btn-link text-white text-decoration-none d-none d-lg-inline">Sign up</a>
+              {% endif %}
+            </div>
+
           </div>
         </div>
       </div>
@@ -82,5 +94,5 @@
         </p>
       </div>
     </footer>
-      </body>
+  </body>
 </html>
